@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- namespace：命名空间，用于隔离sql -->
+<!-- 还有一个很重要的作用，使用动态代理开发DAO，1. namespace必须和Mapper接口类路径一致 -->
+
+<mapper namespace="com.pangw.mapper.UserMapper">
+
+	<!-- 根据用户id查询用户 -->
+	<!-- 2. id必须和Mapper接口方法名一致 -->
+	<!-- 3. parameterType必须和接口方法参数类型一致 -->
+	<!-- 4. resultType必须和接口方法返回值类型一致 -->
+	<select id="queryUserById" parameterType="int" resultType="com.pangw.dao.User">
+		select * from user where id = #{id}
+	</select>
+
+	<!-- 根据用户名查询用户 -->
+	<select id="queryUserByUsername" parameterType="string"
+		resultType="com.pangw.dao.User">
+		select * from user where username like '%${value}%'
+	</select>
+
+	<!-- 保存用户 -->
+	<insert id="saveUser" parameterType="com.pangw.dao.User">
+		<selectKey keyProperty="id" keyColumn="id" order="AFTER"
+			resultType="int">
+			select last_insert_id()
+		</selectKey>
+		insert into user(username,birthday,sex,address) values
+		(#{username},#{birthday},#{sex},#{address});
+	</insert>
+
+	<select id="queryUserByQueryVo" parameterType="com.pangw.dao.QueryVo"
+		resultType="com.pangw.dao.User">
+		select * from user where username like
+		'%${user.username}%'
+
+	</select>
+
+
+	<select id="queryUserCount" resultType="int">
+		select count(*) from user
+	</select>
+
+	<select id="queryUserByWhere" parameterType="com.pangw.dao.User"
+		resultType="com.pangw.dao.User">
+		select id,username,birthday,sex,address from user
+		where 1 = 1
+		<if test="sex !=null and sex != ''">
+			and sex = #{sex}
+		</if>
+		<if test="username != null and username != ''">
+			and username like '%${username}%'
+		</if>
+	</select>
+
+	<select id="queryUserByWhere2" parameterType="com.pangw.dao.User"
+		resultType="com.pangw.dao.User">
+		select id,username,birthday,sex,address from user
+		<where>
+			<if test="sex !=null and sex != ''">
+				and sex = #{sex}
+			</if>
+			<if test="username != null and username != ''">
+				and username like '%${username}%'
+			</if>
+		</where>
+	</select>
+
+	<select id="queryUserByWhere3" parameterType="com.pangw.dao.User"
+		resultType="com.pangw.dao.User">
+		select
+		<include refid="com.pangw.mapper.OrderMapper.userFields"></include>
+		from user
+		<where>
+			<if test="sex !=null and sex != ''">
+				and sex = #{sex}
+			</if>
+			<if test="username != null and username != ''">
+				and username like '%${username}%'
+			</if>
+		</where>
+	</select>
+
+	<select id="queryUserByIds" parameterType="com.pangw.dao.QueryVo"
+		resultType="com.pangw.dao.User">
+
+		select * from user
+		<!-- foreach标签，进行遍历 -->
+		<!-- collection：遍历的集合，这里是QueryVo的ids属性 -->
+		<!-- item：遍历的项目，可以随便写，，但是和后面的#{}里面要一致 -->
+		<!-- open：在前面添加的sql片段 -->
+		<!-- close：在结尾处添加的sql片段 -->
+		<!-- separator：指定遍历的元素之间使用的分隔符 -->
+
+
+		<where>
+			<foreach collection="ids" item="item" open="id in (" close=")"
+				separator=",">
+				#{item}
+			</foreach>
+
+		</where>
+
+	</select>
+
+
+	<select id="queryOrderUser" resultType="com.pangw.dao.OrderUser">
+
+		select o.id, o.user_id,
+		o.number, o.createtime, o.note,
+		u.username,
+		u.address from orders o left
+		join user u on o.user_id = u.id
+	</select>
+
+	<resultMap type="com.pangw.dao.Order" id="orderUserResultMap">
+
+		<id property="userId" column="user_id" />
+		<result property="number" column="number" />
+		<result property="createtime" column="createtime" />
+		<result property="note" column="note" />
+
+		<!-- association ：配置一对一属性 -->
+		<!-- property:order里面的User属性名 -->
+		<!-- javaType:属性类型 -->
+
+		<association property="user" javaType="com.pangw.dao.User">
+			<id property="id" column="user_id" />
+			<result property="username" column="username" />
+			<result property="address" column="address" />
+
+		</association>
+	</resultMap>
+
+
+	<select id="queryOrderUserResultMap" resultMap="orderUserResultMap">
+
+		select o.id,
+		o.user_id , o.number, o.createtime, o.note,
+		u.username,
+		u.address from
+		orders o left join user u on o.user_id = u.id
+
+	</select>
+
+
+	<resultMap type="com.pangw.dao.User" id="userOrderResultMap">
+		<id property="id" column="id" />
+		<result property="username" column="username" />
+		<result property="birthday" column="birthday" />
+		<result property="sex" column="sex" />
+		<result property="address" column="address" />
+
+		<collection property="orders" javaType="list"
+			ofType="com.pangw.dao.Order">
+			<id property="id" column="oid" />
+			<result property="number" column="number" />
+			<result property="createtime" column="createtime" />
+			<result property="note" column="note" />
+
+		</collection>
+
+	</resultMap>
+
+	<select id="queryUserOrder" resultMap="userOrderResultMap">
+		select
+		u.id,
+		u.username,
+		u.birthday,
+		u.sex,
+		u.address,
+		u.id oid,
+		o.number,
+		o.createtime,
+		o.note
+		from
+		user u
+		left join orders o on u.id = o.user_id
+	</select>
+
+
+
+
+</mapper>
+
+
+
+
